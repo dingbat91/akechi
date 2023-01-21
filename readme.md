@@ -1,4 +1,4 @@
-# AKechi Bot README
+# Akechi Bot README
 
 Hi everyone, this is the readme for the Akechi Bot
 
