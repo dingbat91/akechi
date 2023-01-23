@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { Module } from "module";
 
 const command = {
@@ -17,6 +17,9 @@ const command = {
 				.setDescription("Description of the game")
 				.setRequired(true)
 		)
+		.addStringOption((option) =>
+			option.setName("url").setDescription("Games URL").setRequired(true)
+		)
 		.addBooleanOption((option) =>
 			option
 				.setName("ephemeral")
@@ -24,7 +27,21 @@ const command = {
 		),
 	async execute(interaction) {
 		await interaction.deferReply();
-		await interaction.editReply("Hello friend~");
+		const name = interaction.options.getString("name");
+		const description = interaction.options.getString("description");
+		const ephemeral = interaction.options.getBoolean("ephemeral");
+		//Embed Creation
+		const embed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle("New game Added")
+			.addFields(
+				{ name: "Game Name", value: name },
+				{ name: "description", value: description }
+			)
+			.setTimestamp()
+			.setFooter({ text: "Ding testing a footer!" });
+		//--------------------------------------
+		interaction.editReply({ embeds: [embed] });
 	},
 };
 

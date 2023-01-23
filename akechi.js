@@ -8,59 +8,74 @@ const FILENAME = url.fileURLToPath(import.meta.url);
 const DIRNAME = url.fileURLToPath(new URL(".", import.meta.url));
 dotenv.config();
 
-const client = new Client({
-	intents: [
-		GatewayIntentBits.Guilds,
-		GatewayIntentBits.GuildMessages,
-		GatewayIntentBits.GuildMembers,
-		GatewayIntentBits.DirectMessages,
-		GatewayIntentBits.GuildMessageReactions,
-	],
-});
-
 //Slash command loading------------------------
-client.commands = new Collection();
+async function loadSlash(client) {
+	client.commands = new Collection();
+	const COMMANDSPATH = path.join(DIRNAME, "commands");
+	const COMMANDFILES = fs
+		.readdirSync(COMMANDSPATH)
+		.filter((file) => file.endsWith(".js"));
 
-const COMMANDSPATH = path.join(DIRNAME, "commands");
-const COMMANDFILES = fs
-	.readdirSync(COMMANDSPATH)
-	.filter((file) => file.endsWith(".js"));
-
-for (const file of COMMANDFILES) {
-	const COMMAND = await import(`./commands/${file}`);
-	if ("data" in COMMAND.default && "execute" in COMMAND.default) {
-		client.commands.set(COMMAND.default.data.name, COMMAND);
-	} else {
-		console.log(
-			`[Warning] The command at ${FILEPATH} is missing a requird "data" or "execute" property`
-		);
+	for (const file of COMMANDFILES) {
+		const COMMAND = await import(`./commands/${file}`);
+		if ("data" in COMMAND.default && "execute" in COMMAND.default) {
+			client.commands.set(COMMAND.default.data.name, COMMAND);
+		} else {
+			console.log(
+				`[Warning] The command at ${FILEPATH} is missing a requird "data" or "execute" property`
+			);
+		}
 	}
-}
+} //--------------------------------------------
+
 //---------------------------------------------
-client.on(Events.InteractionCreate, async (interaction) => {
-	if (!interaction.isChatInputCommand()) return;
+function loadHandlers(client) {
+	client.on(Events.InteractionCreate, async (interaction) => {
+		if (!interaction.isChatInputCommand()) return;
 
-	const COMMAND = interaction.client.commands.get(interaction.commandName);
+		const COMMAND = interaction.client.commands.get(interaction.commandName);
 
-	if (!COMMAND) {
-		console.error(`no command matching ${interaction.commandName} was found.`);
-		return;
-	}
+		if (!COMMAND) {
+			console.error(
+				`no command matching ${interaction.commandName} was found.`
+			);
+			return;
+		}
 
-	try {
-		await COMMAND.default.execute(interaction);
-	} catch (err) {
-		console.log(err);
-		await interaction.reply({
-			content: `there was an error while executing this command`,
-			ephemeral: true,
-		});
-	}
-});
+		try {
+			await COMMAND.default.execute(interaction);
+		} catch (err) {
+			console.log(err);
+			await interaction.reply({
+				content: `there was an error while executing this command`,
+				ephemeral: true,
+			});
+		}
+	});
+
+	client.once(Events.ClientReady, (c) => {
+		console.log(`Ready! Logged in as ${c.user.tag}`);
+	});
+}
 //--------------------------
 
-client.once(Events.ClientReady, (c) => {
-	console.log(`Ready! Logged in as ${c.user.tag}`);
-});
+//Start Client//--------------------------------
+export function GetClient() {
+	const client = new Client({
+		intents: [
+			GatewayIntentBits.Guilds,
+			GatewayIntentBits.GuildMessages,
+			GatewayIntentBits.GuildMembers,
+			GatewayIntentBits.DirectMessages,
+			GatewayIntentBits.GuildMessageReactions,
+		],
+	});
 
-client.login(process.env.TOKEN);
+	loadSlash(client);
+	loadHandlers(client);
+
+	return client;
+}
+
+const CLIENT = GetClient();
+CLIENT.login(process.env.TOKEN);
