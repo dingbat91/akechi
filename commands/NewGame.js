@@ -1,5 +1,5 @@
-import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { Module } from "module";
+import { EmbedBuilder, hyperlink, SlashCommandBuilder } from "discord.js";
+import SBLogin from "../supabase/supabase.js";
 
 const command = {
 	data: new SlashCommandBuilder()
@@ -29,14 +29,39 @@ const command = {
 		await interaction.deferReply();
 		const name = interaction.options.getString("name");
 		const description = interaction.options.getString("description");
+		let url = interaction.options.getString("url");
 		const ephemeral = interaction.options.getBoolean("ephemeral");
+
+		if (!url.startsWith("Https://") || url.startsWith("http://")) {
+			url = "https://" + url;
+		}
+
+		const supabase = await SBLogin();
+		const { data, error } = await supabase.from("Games").insert(
+			[
+				{
+					name: name,
+					description: description,
+					url: url,
+					gamemasters: [interaction.user.id],
+				},
+			],
+			{
+				upsert: true,
+			}
+		);
+		if (error !== null) {
+			console.log(error);
+		}
+
 		//Embed Creation
 		const embed = new EmbedBuilder()
 			.setColor(0x0099ff)
 			.setTitle("New game Added")
 			.addFields(
 				{ name: "Game Name", value: name },
-				{ name: "description", value: description }
+				{ name: "description", value: description },
+				{ name: "url", value: hyperlink(url, url) }
 			)
 			.setTimestamp()
 			.setFooter({ text: "Ding testing a footer!" });
