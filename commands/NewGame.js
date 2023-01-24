@@ -1,5 +1,6 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { Module } from "module";
+import { url } from "inspector";
+import { PBConnect } from "../pocketbase/connection.js";
 
 const command = {
 	data: new SlashCommandBuilder()
@@ -26,10 +27,31 @@ const command = {
 				.setDescription("Whether the reply is ephemeral")
 		),
 	async execute(interaction) {
-		await interaction.deferReply();
+		await interaction.deferReply({ ephemeral: true });
+
+		//Interaction extraction
 		const name = interaction.options.getString("name");
 		const description = interaction.options.getString("description");
 		const ephemeral = interaction.options.getBoolean("ephemeral");
+		const url = interaction.options.getString("url");
+
+		//Database save
+		const pb = PBConnect();
+		const gmarray = [interaction.user.id];
+
+		const data = {
+			name: name,
+			description: description,
+			url: url,
+			gamemasters: JSON.parse(gmarray),
+		};
+
+		try {
+			const record = await pb.collection("games").create(data);
+		} catch (err) {
+			console.table(data);
+			console.log(err);
+		}
 		//Embed Creation
 		const embed = new EmbedBuilder()
 			.setColor(0x0099ff)
@@ -41,7 +63,6 @@ const command = {
 			.setTimestamp()
 			.setFooter({ text: "Ding testing a footer!" });
 		//--------------------------------------
-		interaction.editReply({ embeds: [embed] });
 	},
 };
 
